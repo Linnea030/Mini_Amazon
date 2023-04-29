@@ -15,7 +15,10 @@
       <li class="list-group-item">Order status: {{ order.status }}</li>
       <li class="list-group-item">Generate time: {{ order.generate_time }}</li>
       {% if order.is_loaded == True %}
-      <li class="list-group-item">Shippment ID: {{ order.id }}</li>
+        <li class="list-group-item">Shippment ID: {{ order.id }}</li>
+        {% if order.is_truck_assigned == True %}
+          <li class="list-group-item">Truck id: {{ order.truck_id }}</li>
+        {% endif %}
       {% endif %}
     </ul>
     {% endfor %}

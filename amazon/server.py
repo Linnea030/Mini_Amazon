@@ -85,39 +85,42 @@ def recv_world(socket_world,conn):
                 helper.ack_to_world(socket_world,arrive.seqnum)
                 # acquire this item's count now in the warehouse(database)
                 ######提取目前所有的库存数量
-                sql = '''SELECT num_in_stock FROM web_product WHERE id = %s;'''
-                cursor.execute(sql, (arrive.things[0].id,))
-                curr_count = cursor.fetchone()
-                # the item's count after the replenish
-                remaining_items = arrive.things[0].count + curr_count[0]
-
-                ######提取对应的订单
-                sql = '''SELECT id, count FROM web_order WHERE is_processed = TRUE AND is_packed = FALSE AND product_id = %s;'''
-                cursor.execute(sql, (arrive.things[0].id,))
-                orders = cursor.fetchall()
+                with helper.order_lock_db:
+                    sql = '''SELECT num_in_stock FROM web_product WHERE id = %s;'''
+                    cursor.execute(sql, (arrive.things[0].id,))
+                    curr_count = cursor.fetchone()
+                    # the item's count after the replenish
+                    remaining_items = arrive.things[0].count + curr_count[0]
+                with helper.order_lock_db:
+                    ######提取对应的订单
+                    sql = '''SELECT id, count FROM web_order WHERE is_processed = TRUE AND is_packed = FALSE AND product_id = %s;'''
+                    cursor.execute(sql, (arrive.things[0].id,))
+                    orders = cursor.fetchall()
                 ######所有订单中，寻找符合world购买对应数量的商品的订单进行处理
                 for order in orders:
                     # when remaining size>=0, update the order's is_packed and is_order_placed to true
                     if remaining_items >= order[1]:
                         remaining_items -= order[1]
-                        # update database (is_packed,is_order_placed,status), generate APack
-                        sql = '''UPDATE web_order SET is_packed = TRUE, status = 'packing' WHERE id = %s;'''
-                        cursor.execute(sql, (order[0],))
-                        conn.commit()
-
-                        sql = '''SELECT id, description FROM web_product WHERE id = %s;'''
-                        cursor.execute(sql, (arrive.things[0].id,))
-                        product = cursor.fetchone()
+                        with helper.order_lock_db:
+                            # update database (is_packed,is_order_placed,status), generate APack
+                            sql = '''UPDATE web_order SET is_packed = TRUE, status = 'packing' WHERE id = %s;'''
+                            cursor.execute(sql, (order[0],))
+                            conn.commit()
+                        with helper.order_lock_db:
+                            sql = '''SELECT id, description FROM web_product WHERE id = %s;'''
+                            cursor.execute(sql, (arrive.things[0].id,))
+                            product = cursor.fetchone()
 
                         ######返回Apack给world
                         with helper.seq_lock:
                             APack= helper.generate_pack(order, product)
                             helper.add_toWorld(APack)
                             print("Add to World dic: Apack - In received from APurchaesMore!")
-                        # update database, generate ASendTruck
-                        sql = '''UPDATE web_order SET is_truck_requested = TRUE WHERE id = %s;'''
-                        cursor.execute(sql, (order[0],))
-                        conn.commit()
+                        with helper.order_lock_db:
+                            # update database, generate ASendTruck
+                            sql = '''UPDATE web_order SET is_truck_requested = TRUE WHERE id = %s;'''
+                            cursor.execute(sql, (order[0],))
+                            conn.commit()
                         with helper.seq_lock:
                             ############ send给UPS 要一辆卡车
                             APickupReq = helper.generate_APickupReq()
@@ -125,11 +128,12 @@ def recv_world(socket_world,conn):
                             print("Add to UPS dic: APickupReq - In received from APurchaesMore!")
                     else:
                         continue
-                ######更新库存量
-                #update count in warehouse (it should still be 0)
-                sql = '''UPDATE web_product SET num_in_stock = %s WHERE id = %s;'''
-                cursor.execute(sql, (remaining_items,arrive.things[0].id))
-                conn.commit()
+                with helper.order_lock_db:
+                    ######更新库存量
+                    #update count in warehouse (it should still be 0)
+                    sql = '''UPDATE web_product SET num_in_stock = %s WHERE id = %s;'''
+                    cursor.execute(sql, (remaining_items,arrive.things[0].id))
+                    conn.commit()
 
         #recv Apacked(topack)
         if len(world_response.ready) > 0:
@@ -154,10 +158,11 @@ def recv_world(socket_world,conn):
                     order_to_putOnTruck = cursor.fetchone() # order = []
                 
                 if order_to_putOnTruck is not None:
+                    with helper.order_lock_db:
                     # update database
-                    sql = '''UPDATE web_order SET is_loaded = TRUE, status = 'loading' WHERE id = %s;'''
-                    cursor.execute(sql, (order_to_putOnTruck[0],))
-                    conn.commit()
+                        sql = '''UPDATE web_order SET is_loaded = TRUE, status = 'loading' WHERE id = %s;'''
+                        cursor.execute(sql, (order_to_putOnTruck[0],))
+                        conn.commit()
                     
                     with helper.seq_lock:
                         APutOnTruck = helper.generate_APutOnTruck(order_to_putOnTruck)
@@ -178,16 +183,16 @@ def recv_world(socket_world,conn):
             for load in world_response.loaded:
                 #ack to world
                 helper.ack_to_world(socket_world, load.seqnum)
-                #change status to loaded
-                sql = '''UPDATE web_order SET status = 'loaded' WHERE is_loaded = TRUE AND id = %s;'''
-                cursor.execute(sql, (load.shipid,))
-                conn.commit()
-                #generate AFinishLoading
-                sql = '''SELECT id FROM web_order WHERE id = %s;'''
-                cursor.execute(sql, (load.shipid,))
-                order = cursor.fetchone()              
-                    
                 with helper.order_lock_db:
+                    #change status to loaded
+                    sql = '''UPDATE web_order SET status = 'loaded' WHERE is_loaded = TRUE AND id = %s;'''
+                    cursor.execute(sql, (load.shipid,))
+                    conn.commit()
+
+                    sql = '''SELECT id FROM web_order WHERE id = %s;'''
+                    cursor.execute(sql, (load.shipid,))
+                    order = cursor.fetchone()              
+                    
                     sql = '''UPDATE web_order SET status = 'delivering', is_delivered = TRUE WHERE status = 'loaded' AND id = %s;'''
                     cursor.execute(sql, (load.shipid,))
                     conn.commit()
@@ -297,10 +302,15 @@ if __name__ == '__main__':
 
     # # create product
     sql = '''INSERT INTO web_product (id, name, description, price, avg_score, category_id, num_in_stock) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT(id) DO NOTHING'''
-    cursor.execute(sql,(1, 'book', 'a useful book', 10, 5, 2, 3))
+    cursor.execute(sql,(1, 'book', 'a useful book', 10, 5, 2, 0))
     conn.commit()
     sql = '''INSERT INTO web_product (id, name, description, price, avg_score, category_id, num_in_stock) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT(id) DO NOTHING'''
-    cursor.execute(sql,(2, 'chips', 'good good', 20, 3, 1, 2))
+    cursor.execute(sql,(2, 'chips', 'good good', 20, 3, 1, 0))
+    conn.commit()
+
+    # # delete exist order
+    sql = '''DELETE from web_order;'''
+    cursor.execute(sql)
     conn.commit()
 
     # Connect to the world with world id = 1

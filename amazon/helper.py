@@ -101,7 +101,7 @@ def connectWorld(cmd):
     send_msg(s,cmd)
     connect_reply = world_amazon_pb2.AConnected()
     connect_reply.ParseFromString(recv_msg(s))
-    print("Connect to world" + connect_reply.worldid + " with result "+ connect_reply.result)
+    print("Connect to world" + str(connect_reply.worldid) + " with result "+ str(connect_reply.result))
     return s
 
 #connect to database
@@ -110,7 +110,7 @@ def connect_db():
         database="postgres",
         user="postgres",
         password="postgres",
-        host="127.0.0.1",
+        host="db",
         port="5432"
     )
     print("Opened database successfully by backend!")
@@ -283,12 +283,12 @@ def UCommandHandler(ups_command, dbConn):
             print("Message from UPS: received UArrived!")
             
             # find is there any unassigned package
-            with order_lock_db:
-                sql = '''SELECT *
-                        FROM web_order
-                        WHERE warehouse_id = %s AND is_truck_requested = TRUE AND is_truck_assigned=FALSE;'''
-                cursor.execute(sql, (arrivedTruck.whid, ))
-                unassigned_order = cursor.fetchone() # orders = []
+            order_lock_db.acquire()
+            sql = '''SELECT *
+                    FROM web_order
+                    WHERE warehouse_id = %s AND is_truck_requested = TRUE AND is_truck_assigned=FALSE;'''
+            cursor.execute(sql, (arrivedTruck.whid, ))
+            unassigned_order = cursor.fetchone() # orders = []
             
             # if there is no unassigned order
             # send ALoadComplete to UPS
@@ -297,27 +297,28 @@ def UCommandHandler(ups_command, dbConn):
                     ALoadComplete = generate_ALoadComplete(arrivedTruck.truckid)
                     add_messageToUPS(ALoadComplete)
                     print("Add to UPS: ALoadComplete - in TruckArrived")
+                order_lock_db.release()
                 continue
 
             # update db tuples with the truckid
-            with order_lock_db:
-                # assign the truck to the current truck if there is any package unassigned
-                sql = '''UPDATE web_order SET truck_id = %s, is_truck_assigned=TRUE WHERE warehouse_id = %s AND is_truck_requested = TRUE AND is_truck_assigned=FALSE;'''
-                cursor.execute(sql,(arrivedTruck.truckid, arrivedTruck.whid))
-                dbConn.commit()
+            # assign the truck to the current truck if there is any package unassigned
+            sql = '''UPDATE web_order SET truck_id = %s, is_truck_assigned=TRUE WHERE warehouse_id = %s AND is_truck_requested = TRUE AND is_truck_assigned=FALSE;'''
+            cursor.execute(sql,(arrivedTruck.truckid, arrivedTruck.whid))
+            dbConn.commit()
 
-                sql = '''UPDATE web_order SET is_truck_arrived = TRUE WHERE is_truck_arrived = FALSE AND truck_id = %s;'''
-                cursor.execute(sql, (arrivedTruck.truckid,))
-                dbConn.commit()
+            sql = '''UPDATE web_order SET is_truck_arrived = TRUE WHERE is_truck_arrived = FALSE AND truck_id = %s;'''
+            cursor.execute(sql, (arrivedTruck.truckid,))
+            dbConn.commit()
                 
             #if order is packed, generate a APutOnTruck Acommand and send it to world'
-            with order_lock_db:
-                sql = '''SELECT web_order.id, warehouse_id, truck_id, status, address_x, address_y, ups_username, 
-                        web_product.id, count, web_product.name, web_product.description 
-                        FROM web_order, web_product 
-                        WHERE web_order.product_id=web_product.id AND is_truck_arrived = TRUE AND truck_id = %s;'''
-                cursor.execute(sql, (arrivedTruck.truckid, ))
-                orders = cursor.fetchall() # orders = [][]
+            sql = '''SELECT web_order.id, warehouse_id, truck_id, status, address_x, address_y, ups_username, 
+                    web_product.id, count, web_product.name, web_product.description 
+                    FROM web_order, web_product 
+                    WHERE web_order.product_id=web_product.id AND is_truck_arrived = TRUE AND truck_id = %s;'''
+            cursor.execute(sql, (arrivedTruck.truckid, ))
+            orders = cursor.fetchall() # orders = [][]
+
+            order_lock_db.release()
             
             for order in orders:
                 if order[3] == 'packed':
@@ -331,8 +332,7 @@ def UCommandHandler(ups_command, dbConn):
                         add_toWorld(APutOnTruck)
                         print("Add to World: APutOnTruck - In received TruckArriced from UPS")
                     
-                    # send ALoad to UPS
-                    with seq_lock:
+                        # send ALoad to UPS
                         ALoad = generate_ALoad(order)
                         add_messageToUPS(ALoad)
                         print("Add to UPS: ALoad - In received TruckArriced from UPS")
