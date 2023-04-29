@@ -1,0 +1,17 @@
+ECE568 Mini-Amazon
+
+Siyuan Li
+Yixin Cao
+
+Differentiation
+
+1. A shopping cart has been designed to make it easy for users to add the products they want to buy to the cart. The contents of the shopping cart can be modified at any time.
+2. An interface for users to modify their personal information and to view their personal information. User can log out at anytime.
+3. The user can specify the delivery address when placing an order. This can be changed later on in the official UPS interface. 
+4. the user can view all their orders and check the status of their orders.
+5. Product categories are designed for each product and users can search for products by product category. You can also search for products by product description and name. 
+6. Each time an order is placed, an email is sent to the user's registered email address to confirm the order. Delivery emails are also sent to the user after the order is delivered. 
+7. There is a comprehensive mechanism for binding Amazon users to UPS user accounts. It is easy for users to check the status of their orders on the UPS website.
+8. Added the ability to view stock for an item. Showed product ratings.
+9. Bootstrap was used to adjust the layout.
+10. Complete and robust merchandise distribution mechanism to efficiently dispatch orders to users

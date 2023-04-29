@@ -1,0 +1,17 @@
+{% extends 'web/base.html' %}
+
+{% block content %}
+<h1 align="center">Search for products</h1>
+      {{ prompt }}
+    <form method = "POST">
+        {% csrf_token %}
+        {% for field in form %}
+        <ul class="list-group">
+            <li class="list-group-item">{{field.label}} : {{field}}</li>
+        </ul>
+        {% endfor %}
+        <div class="form-group">
+            <button class="btn btn-outpline-info" type="submit">Search</button>
+        </div>
+    </form>
+{% endblock %}

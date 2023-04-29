@@ -1,0 +1,42 @@
+{% extends 'web/base.html' %}
+
+{% block content %}
+<div class="panel panel-default">
+    <!-- Default panel contents -->
+    <div class="panel-heading"><h4>Edit User Profile</h4></div>
+
+    <!-- List group -->
+    <form method="POST" novalidate>
+        {% csrf_token %}
+        <div style="width: 1300px; margin-left: 100px;">
+            <label>{{form.email.label}}</label>
+            <input type="text" name="email" class="form-control" placeholder="{{ form.email.label }}"
+                value="{{ cur_user.email }}">
+            <div style="color: red">{{form.email.errors.0}}</div>
+
+            <label>{{form.phone.label}}</label>
+            <input type="text" name="phone" class="form-control" placeholder="{{ form.phone.label }}"
+                value="{{ cur_user.riderinfo.phone }}">
+            <div style="color: red">{{form.phone.errors.0}}</div>
+
+            <label>{{form.first_name.label}}</label>
+            <input type="text" name="first_name" class="form-control" placeholder="{{ form.first_name.label }}"
+                value="{{ cur_user.first_name }}">
+            <div style="color: red">{{form.first_name.errors.0}}</div>
+
+            <label>{{form.last_name.label}}</label>
+            <input type="text" name="last_name" class="form-control" placeholder="{{ form.last_name.label }}"
+                value="{{ cur_user.last_name }}">
+            <div style="color: red">{{form.last_name.errors.0}}</div>
+
+            <label>{{form.address.label}}</label>
+            <input type="text" name="address" class="form-control" placeholder="{{ form.address.label }}"
+                value="{{ cur_user.riderinfo.address }}">
+            <!-- {{field}} -->
+            <div style="color: red">{{form.address.errors.0}}</div>
+            <p></p>
+            <input type="submit" value="confirm" class="btn btn-primary">
+        </div>
+    </form>
+</div>
+{% endblock %}

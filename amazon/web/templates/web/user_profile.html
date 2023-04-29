@@ -1,0 +1,19 @@
+{% extends 'web/base.html' %}
+
+{% block content %}
+<div class="panel panel-default">
+    <!-- Default panel contents -->
+    <div class="panel-heading">User Profile</div>
+  
+    <!-- List group -->
+    <ul class="list-group">
+      <li class="list-group-item">Username: <strong>{{ user.username }}</strong></li>
+      <li class="list-group-item">Name: {{ user.first_name }} {{ user.last_name }}</li>
+      <li class="list-group-item">Phone: {{ user.amazonuser.phone }}</li>
+      <li class="list-group-item">Email: {{ user.email }}</li>
+      <li class="list-group-item">Address: {{ user.amazonuser.address }}</li>
+      <a href="/web/edit_profile/"><button type="button" class="btn btn-info">Edit Personal Information</button></a>
+    </ul>
+  </div>
+  
+{% endblock %}

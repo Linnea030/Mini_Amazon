@@ -1,0 +1,35 @@
+ECE568 Mini-Amazon
+
+Siyuan Li
+Yixin Cao
+
+Danger Log
+
+4/10
+We had a meeting to discuss the protocol with the UPS students and finalised and submitted the protocol.
+
+4/11
+We sorted out the sequence and business logic of communication between Amazon and world and UPS, and organised the code framework. We decided to use python and Django as it would be perfect for connecting the front and back ends together. The main thing was to divide the project into classes, such as those for creating sockets, those for handling sending and receiving and GPB, etc.
+
+4/13
+We ran through the world code and wrote the functions to connect to and send and receive from world. After testing, we were able to connect to world successfully. 
+
+4/16
+We found that if we kept establishing socket connections with ups, there would be processes that would seize the sockets and not be able to receive messages. So we used to close the socket after receiving a message once and request the connection again before sending the next message.
+
+4/19
+We have finished writing the code for the back end. Start writing the front end.The front end completes the user login logout.We have implemented a number of different unique features and these will be written up in a separate document.
+
+4/21
+We finished writing the front end. Start establishing a communication connection between the front and back end. We start off by using a socket to send order information to the back end. But this was inefficient and we found that we could communicate directly through the database. We added a number of tags to make it easier for the back-end to filter new orders.
+
+4/22
+First test between and UPS. Many logical bugs were found and changes were made.
+
+4/23
+A second test with UPS was carried out to refine the system for loading orders on trucks. The protocol was also reworked.
+
+4/25
+Configure docker.
+
+

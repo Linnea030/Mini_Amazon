@@ -1,0 +1,23 @@
+{% extends 'web/base.html' %}
+
+{% block content %}
+<div class="panel panel-default">
+  <h1 align="center">Your Orders</h1>
+    <!-- Default panel contents -->
+    {% for order in list %}
+    <div class="panel-heading">Order id: {{ order.id }}</div>
+    <!-- List group -->
+    <ul class="list-group">
+      <li class="list-group-item">Product info: <strong>{{ order.product }}</strong></li>
+      <li class="list-group-item">Number: {{ order.count }}</li>
+      <li class="list-group-item">Warehouse ID: {{ order.warehouse_id }}</li>
+      <li class="list-group-item">Original Destination: ({{ order.address_x }},{{ order.address_y }})</li>
+      <li class="list-group-item">Order status: {{ order.status }}</li>
+      <li class="list-group-item">Generate time: {{ order.generate_time }}</li>
+      {% if order.is_loaded == True %}
+      <li class="list-group-item">Shippment ID: {{ order.id }}</li>
+      {% endif %}
+    </ul>
+    {% endfor %}
+  </div>
+{% endblock %}

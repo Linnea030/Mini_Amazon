@@ -1,0 +1,21 @@
+{% extends 'web/base.html' %}
+
+{% block content %}
+<div class="panel panel-default">
+    <h1 align="center">My Cart</h1>
+    <!-- Default panel contents -->
+    {% for p in list %}
+    <div class="panel-heading">Product id: {{ p.id }}</div>
+    <!-- List group -->
+    <ul class="list-group">
+      <li class="list-group-item">Product name: <strong>{{ p.name }}</strong></li>
+      <li class="list-group-item">Description: {{ p.description }}</li>
+      <li class="list-group-item">price: {{ p.price }}</li>
+      <li class="list-group-item">Rate: {{ p.avg_score }} / 5.0</li>
+      <li class="list-group-item">Only {{ p.num_in_stock }} of this product left, but you can request more!</li>
+      <a href="/web/buycart/{{p.id}}"><button type="button" class="btn btn-info">Buy it</button></a>
+      <a href="/web/deleteCart/{{p.id}}"><button type="button" class="btn btn-info">Delete it</button></a>
+    </ul>
+    {% endfor %}
+  </div>
+{% endblock %}
